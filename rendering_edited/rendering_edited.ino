@@ -6,8 +6,9 @@
 
 #include <AudioOscillator.h>
 
-#include "Adafruit_GFX.h"
+#include <Adafruit_GFX.h>
 #include "Adafruit_ILI9341.h"
+#include <Fonts/FreeMonoBoldOblique24pt7b.h>
 
 #define TFT_RST 8
 #define TFT_DC  9
@@ -18,7 +19,7 @@ Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS ,TFT_DC ,TFT_RST);
 Oscillator  *theOscillator;
 OutputMixer *theMixer;
 bool ErrEnd = false;
-
+bool er;
 uint16_t freq = 250;
 float attack = 500;
 float decay = 200;
@@ -39,11 +40,14 @@ bool button1 = false;
 bool button2 = false;
 bool button3 = false;
 
+bool refreshDisplay = false;
+char buf[60];
+
 unsigned long lastInputTime = 0;
 
 static void menu()
 {
-  printf("loop() started\n");
+  printf("loop() start\n");
 }
 
 static void show()
@@ -131,24 +135,36 @@ static void attention_cb(const ErrorAttentionParam *atprm)
   puts("Attention!");
 
   if (atprm->error_code >= AS_ATTENTION_CODE_WARNING) {
-    ErrEnd = true;
+    er = true;
   }
 }
 
 //一番上のボタンが押された時
 void button0Pressed() {
-  freq= random(50, 250);
   // attack=(float)analogRead(A0);
   // Serial.println(attack);
   theOscillator->set(0, attack, decay, sustain, release);
   theOscillator->set(1, attack, decay, sustain, release);
   theOscillator->set(0, freq);
   theOscillator->set(1, freq * 3);
-  
+
+  refreshDisplay = true;
+
   //演奏開始時刻
-  lastInputTime = millis();
+  // lastInputTime = millis();
+
+  //再生開始なら、今後はボタンを離すことを監視
+  attachInterrupt(digitalPinToInterrupt(pin0), button0Released, RISING);
 
 };
+
+void button0Released() {
+  theOscillator->set(0, 0);  
+  theOscillator->set(1, 0);
+  //再生終了なら、今後はボタンを押すことを監視
+  attachInterrupt(digitalPinToInterrupt(pin0), button0Pressed, FALLING);
+  
+}
 void button1Pressed() {
   attack += 100;
 };
@@ -156,7 +172,6 @@ void button2Pressed() {
   attack -= 100;
 };
 void button3Pressed() {
-
 };
 
 void setup()
@@ -221,7 +236,7 @@ void setup()
   printf("setup() complete\n");
   menu();
 
-  bool er;
+
   er = theOscillator->set(0, 0);
   er = theOscillator->set(1, 0);
 
@@ -234,13 +249,19 @@ void setup()
 
   //表示... メモリ足りない？
   tft.fillScreen(0);
-  tft.setTextSize(2);
-  tft.println("Play");
-  tft.println();
-  tft.println("^");
-  tft.println("|");
-  tft.println("|");
-  tft.println("v");
+  tft.setTextSize(4);
+  // tft.setFont( &FreeMonoBoldOblique24pt7b );
+  tft.println("Sound\nto");
+  tft.setTextColor(ILI9341_RED);
+  tft.println("Spice");
+  tft.setTextColor(ILI9341_WHITE);
+  tft.println("Synthesizer:)");
+  // tft.println("Play");
+  // tft.println();
+  // tft.println("^");
+  // tft.println("|");
+  // tft.println("|");
+  // tft.println("v");
 
 
   if(!er){
@@ -258,81 +279,32 @@ void setup()
 
 void loop()
 {
-//   bool er = true;
+  // attack = analogReadMap(A0, 0, 5000);
+  // decay = analogReadMap(A1, 0, 5000);
+  // sustain = analogReadMap(A2, 0, 100);
+  // release = analogReadMap(A3, 0, 5000);
 
-// freq=255;
-// attack=(float)analogRead(A0);
-//  Serial.println(attack);
-//   er = theOscillator->set(0, freq);
-//   er = theOscillator->set(1, freq);
+  Serial.println(attack);
+  Serial.println(decay);
+  Serial.println(sustain);
+  Serial.println(release);
+  Serial.println("------");
 
-//   //  analogReadMap(A0,0,5000);
+  freq = random(200, 500);
 
-//   er = theOscillator->set(0, attack, decay, sustain, release);
-//   er = theOscillator->set(1, attack, decay, sustain, release);
+  // freq = analogRead(A0);
+  // Serial.println(freq);
 
-
-  /* Menu operation */
-
-  //辛さ
-  //1音だけ鳴る
-
-  // if (Serial.available() > 0)
-  // {
-  //   bool er = true;
-  //   switch (Serial.read()) {
-  //     case 'i': // Sin
-  //       er = theOscillator->set(0,SinWave);
-  //       er = theOscillator->set(1,SinWave);
-  //       break;
-  //     case 'r': // Rect
-  //       er = theOscillator->set(0,RectWave);
-  //       er = theOscillator->set(1,RectWave);
-  //       break;
-  //     case 'a': // Saw
-  //       er = theOscillator->set(0,SawWave);
-  //       er = theOscillator->set(1,SawWave);
-  //       break;
-  //     case 's': // Stop
-  //       er = theOscillator->set(0, 0);
-  //       er = theOscillator->set(1, 0);
-  //       break;
-
-  //     case 'u': // Freq up
-  //       freq += 10;
-  //       er = theOscillator->set(0, freq);
-  //       er = theOscillator->set(1, freq);
-  //       break;
-  //     case 'd': // Freq down
-  //       freq -= 10;
-  //       er = theOscillator->set(0, freq);
-  //       er = theOscillator->set(1, freq);
-  //       break;
-  //     case 't': //start
-  //       attack=(float)analogRead(A0);
-  //       Serial.println(attack);
-  //       er = theOscillator->set(0, attack, decay, sustain, release);
-  //       er = theOscillator->set(1, attack, decay, sustain, release);
-  //       freq = 255;
-  //       er = theOscillator->set(0, freq);
-  //       er = theOscillator->set(1, freq);
-  //       break;
-
-  //     default:
-  //       break;
-  //   }
-  //   if(!er){
-  //     puts("set error!");
-  //     goto stop_rendering;
-  //   }
+  // if (millis() - lastInputTime >= 3000) {
+  //   // 3秒後に停止
+  //   theOscillator->set(0, 0);  
+  //   theOscillator->set(1, 0);
   // }
 
-  if (millis() - lastInputTime >= 3000) {
-    // 1秒後に停止
-    theOscillator->set(0, 0);  
-    theOscillator->set(1, 0);
+  if(!er){
+    puts("set error!");
+    goto stop_rendering;
   }
-
   active();
 
   usleep(1 * 1000);
